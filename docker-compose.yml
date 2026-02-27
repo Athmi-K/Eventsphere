@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: eventsphere_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: A1T2H3M4I5
+      POSTGRES_DB: eventsphere
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eventsphere_backend
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DB_USER=postgres
+      - DB_PASSWORD=A1T2H3M4I5
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_NAME=eventsphere
+      - JWT_SECRET=supersecretjwtkey_change_in_production
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eventsphere_frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
